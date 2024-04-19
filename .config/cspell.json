@@ -2,7 +2,7 @@
   "version": "0.2",
   "language": "en",
   "words": [
-    "aescgm",
+    "aesgcm",
     "ciphertext",
     "cpus",
     "dockerhub",
