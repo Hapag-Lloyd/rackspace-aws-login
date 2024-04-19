@@ -53,5 +53,5 @@ if [ -f ~/.config/rackspace-aws-login/aws_login.sh ]; then
   echo "aws_login.sh already exists in ~/.config/rackspace-aws-login."
   exit 2
 else
-  cp aws_login.sh ~/.config/rackspace-aws-login/aws_login.sh
+  cp aws_accounts.json ~/.config/rackspace-aws-login/
 fi
