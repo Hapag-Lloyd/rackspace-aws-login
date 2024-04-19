@@ -44,3 +44,7 @@ export | grep AWS_
 # list all S3 buckets in the account
 aws s3 ls
 ```
+
+# Contributing
+
+Please read [CONTRIBUTING.md](.github/CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
