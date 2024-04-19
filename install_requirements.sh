@@ -49,7 +49,7 @@ deactivate
 #
 mkdir -p ~/.config/rackspace-aws-login
 
-if [ -f ~/.config/rackspace-aws-login/aws_login.sh ]; then
+if [ -f ~/.config/rackspace-aws-login/aws_accounts.json ]; then
   echo "aws_login.sh already exists in ~/.config/rackspace-aws-login."
   exit 2
 else
