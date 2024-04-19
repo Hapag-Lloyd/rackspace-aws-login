@@ -2,21 +2,26 @@
   "version": "0.2",
   "language": "en",
   "words": [
+    "aescgm",
+    "ciphertext",
     "cpus",
+    "dockerhub",
     "Hapag",
     "Infracost",
     "oidc",
+    "pytest",
     "Repology",
     "tflint",
-    "tfsec"
+    "tfsec",
+    "virtualenv"
   ],
   "ignoreWords": [
-    "Buildx",
-    "DOCKERHUB",
+    "AKIA",
     "amannn",
     "aquasecurity",
     "automerge",
     "automerged",
+    "boto",
     "buildcache",
     "buildx",
     "codeowners",
@@ -31,6 +36,7 @@
     "kayman",
     "ludeeus",
     "markdownlint",
+    "maxsplit",
     "mktemp",
     "ossrh",
     "pascalfrenz",
@@ -41,6 +47,8 @@
     "shuf",
     "shunsuke",
     "signoff",
+    "stty",
+    "venv",
     "vuln"
   ]
 }

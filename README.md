@@ -3,6 +3,7 @@
 Shell and Python scripts to fetch credentials for AWS accounts from Rackspace, storing them in AWS profiles.
 
 Main features:
+
 - fetch AWS credentials from Rackspace
 - cache the Rackspace login cookies (encrypted) to speed up subsequent logins
 - fetch new credentials only if old ones are expired or not present
@@ -45,6 +46,7 @@ export | grep AWS_
 aws s3 ls
 ```
 
-# Contributing
+## Contributing
 
-Please read [CONTRIBUTING.md](.github/CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
+Please read [CONTRIBUTING.md](.github/CONTRIBUTING.md) and [code of conduct](.github/CODE_OF_CONDUCT.md) for details on our, and
+the process for submitting pull requests.

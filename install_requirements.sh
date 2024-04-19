@@ -28,8 +28,13 @@ python_executable=$(find_python_executable)
 
 if [ "$(uname)" == "Darwin" ]; then
   # MacOS
+
+  # external file
+  # shellcheck source=/dev/null
   source venv/bin/activate
 else
+  # external file
+  # shellcheck source=/dev/null
   source venv/Scripts/activate
 fi
 

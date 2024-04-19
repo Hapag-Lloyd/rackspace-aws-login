@@ -17,12 +17,16 @@ function aws_login() {
   local aws_account_id="${1:-}"
 
   if [ "$(uname)" == "Darwin" ]; then
+    # external file
+    # shellcheck source=/dev/null
     source "$script_dir/venv/bin/activate"
   else
+    # external file
+    # shellcheck source=/dev/null
     source "$script_dir/venv/Scripts/activate"
   fi
 
-  # credentials are stored in a file as we can't use a subshell (stdout is shown too late in the terminal)
+  # credentials are stored in a file as we can't use a sub-shell (stdout is shown too late in the terminal)
   exit_state=0
   temp_file="$script_dir/aws_temp"
   touch "$temp_file"
