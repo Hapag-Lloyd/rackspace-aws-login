@@ -5,7 +5,7 @@ Rackspace API.
 
 Main features:
 
-- fetch AWS credentials from Rackspace
+- fetch AWS credentials from Rackspace API
 - fetch new credentials only if old ones are expired or not present
 - use AWS profiles via `aws configure`
 - list all AWS accounts you are authorized to
@@ -18,6 +18,9 @@ The minimum requirements are the AWS CLI and [JQ](https://github.com/jqlang/jq).
 
 Execute `aws_login` on the command line. The first time, the script creates a file in
 `$HOME/config/rackspace-aws-login/aws_accounts.json` caching your accounts. Remove the file to reset the accounts.
+
+In case the script retrieves the credentials from Rackspace, it asks for the Rackspace username and API key. Check your
+Rackspace account to set up the API key.
 
 ```bash
 # place this in your .bash_profile
