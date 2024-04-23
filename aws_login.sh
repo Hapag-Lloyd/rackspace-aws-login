@@ -11,7 +11,9 @@
 #
 function aws_login() {
   local config_dir="$HOME/.config/rackspace-aws-login"
-  mkdir -p "$config_dir"
+  if [ ! -d "$config_dir" ]; then
+    mkdir -p "$config_dir"
+  fi
 
   function get_aws_accounts_from_rackspace() {
     local temporary_rackspace_token
@@ -33,24 +35,6 @@ function aws_login() {
     fi
   }
 
-  read -r -p 'Rackspace username: ' username
-  read -r -sp 'Rackspace API key: ' api_key
-
-  # insert new line after last input
-  echo
-
-  rackspace_token_json=$(curl --location 'https://identity.api.rackspacecloud.com/v2.0/tokens' \
-    --header 'Content-Type: application/json' \
-    --silent \
-    --data "{
-          \"auth\": {
-              \"RAX-KSKEY:apiKeyCredentials\": {
-                  \"username\": \"$username\",
-                  \"apiKey\": \"$api_key\"
-              }
-          }
-      }")
-
   temporary_rackspace_token=$(jq -r '.access.token.id' <<<"$rackspace_token_json")
   tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
 
@@ -67,6 +51,24 @@ function aws_login() {
   aws sts get-caller-identity --profile "$aws_profile_name" >/dev/null 2>&1 || exit_state=$?
 
   if [ $exit_state -ne 0 ]; then
+    read -r -p 'Rackspace username: ' username
+    read -r -sp 'Rackspace API key: ' api_key
+
+    # insert new line after last input
+    echo
+
+    rackspace_token_json=$(curl --location 'https://identity.api.rackspacecloud.com/v2.0/tokens' \
+      --header 'Content-Type: application/json' \
+      --silent \
+      --data "{
+            \"auth\": {
+                \"RAX-KSKEY:apiKeyCredentials\": {
+                    \"username\": \"$username\",
+                    \"apiKey\": \"$api_key\"
+                }
+            }
+        }")
+
     temp_credentials=$(curl --location --silent \
                         --request POST "https://accounts.api.manage.rackspace.com/v0/awsAccounts/$aws_account_no/credentials" \
                         --header "X-Auth-Token: $temporary_rackspace_token" \
