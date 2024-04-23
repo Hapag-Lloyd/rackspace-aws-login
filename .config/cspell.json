@@ -11,6 +11,7 @@
     "oidc",
     "pytest",
     "Repology",
+    "tennant",
     "tflint",
     "tfsec",
     "virtualenv"
@@ -34,6 +35,7 @@
     "hmarr",
     "ibiqlik",
     "kayman",
+    "kskey",
     "ludeeus",
     "markdownlint",
     "maxsplit",
