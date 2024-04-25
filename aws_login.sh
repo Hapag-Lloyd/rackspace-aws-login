@@ -10,64 +10,84 @@
 #        aws_login [aws_account_id]
 #
 function aws_login() {
-  local script_dir
-  script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-  # $1: optional, AWS account ID to connect to
-  local aws_account_id="${1:-}"
-
-  if [ "$(uname)" == "Darwin" ]; then
-    # external file
-    # shellcheck source=/dev/null
-    source "$script_dir/venv/bin/activate"
-  else
-    # external file
-    # shellcheck source=/dev/null
-    source "$script_dir/venv/Scripts/activate"
+  local config_dir="$HOME/.config/rackspace-aws-login"
+  if [ ! -d "$config_dir" ]; then
+    mkdir -p "$config_dir"
   fi
 
-  # credentials are stored in a file as we can't use a sub-shell (stdout is shown too late in the terminal)
+  function get_aws_accounts_from_rackspace() {
+    local temporary_rackspace_token
+    local tennant_id
+
+    temporary_rackspace_token=$1
+    tennant_id=$2
+
+    if [ -f "$config_dir/aws_accounts.txt" ]; then
+      cat "$config_dir/aws_accounts.txt"
+    else
+      aws_accounts=$(curl --location 'https://accounts.api.manage.rackspace.com/v0/awsAccounts' \
+        --silent \
+        --header "X-Auth-Token: $temporary_rackspace_token" \
+        --header "X-Tenant-Id: $tennant_id" | jq -r '.awsAccounts[] | .awsAccountNumber + "_" + .name' | sed 's/\r//' | sort)
+
+      echo "$aws_accounts" > "$config_dir/aws_accounts.txt"
+      echo "$aws_accounts"
+    fi
+  }
+
+  temporary_rackspace_token=$(jq -r '.access.token.id' <<<"$rackspace_token_json")
+  tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
+
+  aws_accounts=$(get_aws_accounts_from_rackspace "$temporary_rackspace_token" "$tennant_id")
+
+  PS3='Select the AWS account to connect to: '
+  select opt in $aws_accounts; do
+    aws_account_no=$(tr -dc '[:print:]' <<<"$opt" | cut -f 1 -d'_')
+    aws_profile_name=$(tr -dc '[:print:]' <<<"$opt" | cut -f 2- -d'_')
+    break
+  done
+
   exit_state=0
-  temp_file="$script_dir/aws_temp"
-  touch "$temp_file"
-
-  "$script_dir"/get_aws_credentials.py "$temp_file" "$aws_account_id" || exit_state=$?
-
-  deactivate
-
-  aws_credentials_as_json=$(cat "$temp_file")
-
-  rm -f "$temp_file"
-
-  # exit state = 2 --> credentials already present
-  if [ $exit_state -eq 2 ]; then
-    read -r profile_name < <(echo "$aws_credentials_as_json" | jq -r '.aws_profile_name' | tr -d '\r\n')
-
-    echo "Switching the AWS_PROFILE to $profile_name"
-    export AWS_PROFILE="$profile_name"
-
-    return 0
-  fi
+  aws sts get-caller-identity --profile "$aws_profile_name" >/dev/null 2>&1 || exit_state=$?
 
   if [ $exit_state -ne 0 ]; then
-    echo "Failed to get the AWS credentials"
+    read -r -p 'Rackspace username: ' username
+    read -r -sp 'Rackspace API key: ' api_key
 
-    return 1
+    # insert new line after last input
+    echo
+
+    rackspace_token_json=$(curl --location 'https://identity.api.rackspacecloud.com/v2.0/tokens' \
+      --header 'Content-Type: application/json' \
+      --silent \
+      --data "{
+            \"auth\": {
+                \"RAX-KSKEY:apiKeyCredentials\": {
+                    \"username\": \"$username\",
+                    \"apiKey\": \"$api_key\"
+                }
+            }
+        }")
+
+    temp_credentials=$(curl --location --silent \
+                        --request POST "https://accounts.api.manage.rackspace.com/v0/awsAccounts/$aws_account_no/credentials" \
+                        --header "X-Auth-Token: $temporary_rackspace_token" \
+                        --header "X-Tenant-Id: $tennant_id")
+
+    access_key=$(jq -r '.credential.accessKeyId' <<<"$temp_credentials")
+    secret_access_key=$(jq -r '.credential.secretAccessKey' <<<"$temp_credentials")
+    session_token=$(jq -r '.credential.sessionToken' <<<"$temp_credentials")
+
+    aws configure --profile "$aws_profile_name" set aws_access_key_id "$(echo "$access_key" | tr -d '\r\n')"
+    aws configure --profile "$aws_profile_name" set aws_secret_access_key "$(echo "$secret_access_key" | tr -d '\r\n')"
+    aws configure --profile "$aws_profile_name" set aws_session_token "$(echo "$session_token" | tr -d '\r\n')"
   else
-    # SC2005: for some reason we need to "echo" here, otherwise the variables are not set
-    # SC2046: we need to split the variables here
-    # shellcheck disable=SC2005,SC2046
-    read -r access_key secret_key session_token profile_name < \
-      <(echo $(echo "$aws_credentials_as_json" | jq -r '.aws_access_key_id, .aws_secret_access_key, .aws_session_token, .aws_profile_name'))
-
-    echo "Switching the AWS_PROFILE to $profile_name and setting the credentials"
-
-    aws configure --profile "$profile_name" set aws_access_key_id "$(echo "$access_key" | tr -d '\r\n')"
-    aws configure --profile "$profile_name" set aws_secret_access_key "$(echo "$secret_key" | tr -d '\r\n')"
-    aws configure --profile "$profile_name" set aws_session_token "$(echo "$session_token" | tr -d '\r\n')"
-
-    export AWS_PROFILE="$profile_name"
-
-    return 0
+    echo "The AWS credentials are still valid."
   fi
+
+  echo "Switching the AWS_PROFILE to $aws_profile_name"
+
+  export AWS_PROFILE="$aws_profile_name"
+
+  return 0
 }

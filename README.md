@@ -1,43 +1,33 @@
 # rackspace-aws-login
 
-Shell and Python scripts to fetch credentials for AWS accounts from Rackspace, storing them in AWS profiles.
+Shell script to fetch credentials for AWS accounts from Rackspace, storing them in AWS profiles. It uses the official
+Rackspace API.
 
 Main features:
 
-- fetch AWS credentials from Rackspace
-- cache the Rackspace login cookies (encrypted) to speed up subsequent logins
+- fetch AWS credentials from Rackspace API
 - fetch new credentials only if old ones are expired or not present
 - use AWS profiles via `aws configure`
-- flexible account setup on user level
+- list all AWS accounts you are authorized to
 
 ## Installation
 
-The minimum requirements are: Python, virtualenv and the AWS CLI. The script expects a `venv` in the same directory. Execute
-`install_requirements.sh` to install all other dependencies.
+The minimum requirements are the AWS CLI and [JQ](https://github.com/jqlang/jq). Install them first.
 
 ## Usage
 
-Set up your AWS accounts in `~/.config/aws_accounts.json`. The account name is used as the AWS profile name.
+Execute `aws_login` on the command line. The first time, the script creates a file in
+`$HOME/config/rackspace-aws-login/aws_accounts.json` caching your accounts. Remove the file to reset the accounts.
 
-```json
-{
-  "aws_accounts": [
-    {
-      "number": "123456789012",
-      "name": "QA"
-    }
-  ]
-}
-```
-
-Execute the login script with the account name as argument or without to list all available accounts.
+In case the script retrieves the credentials from Rackspace, it asks for the Rackspace username and API key. Check your
+Rackspace account to set up the API key.
 
 ```bash
 # place this in your .bash_profile
 source ./aws_login.sh
 
-# log into a AWS account 123456789012
-aws_login 123456789012
+# log into an AWS account. The script presents a lists of all accounts
+aws_login
 
 # AWS_PROFILE is now set
 export | grep AWS_
