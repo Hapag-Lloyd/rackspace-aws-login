@@ -50,15 +50,40 @@ function aws_login() {
 
       read -r -sp 'Keepass Password: ' keepass_password
 
-      username=$(KPScript.exe -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
-      api_key=$( KPScript.exe -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
+      username=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
+      api_key=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
     fi
 
     echo "$username" "$api_key"
   }
 
-  temporary_rackspace_token=$(jq -r '.access.token.id' <<<"$rackspace_token_json")
-  tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
+  function get_rackspace_token_and_tenant() {
+    read rackspace_username rackspace_api_key < <(get_rackspace_username_and_api_key)
+
+    rackspace_token_json=$(curl --location 'https://identity.api.rackspacecloud.com/v2.0/tokens' \
+      --header 'Content-Type: application/json' \
+      --silent \
+      --data "{
+            \"auth\": {
+                \"RAX-KSKEY:apiKeyCredentials\": {
+                    \"username\": \"$rackspace_username\",
+                    \"apiKey\": \"$rackspace_api_key\"
+                }
+            }
+        }")
+
+    temporary_token=$(jq -r '.access.token.id' <<<"$rackspace_token_json")
+    tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
+
+    echo "$temporary_token" "$tennant_id"
+  }
+
+  local temporary_rackspace_token
+  local tennant_id
+
+  if [ ! -f "$config_dir/aws_accounts.txt" ]; then
+    read temporary_rackspace_token tennant_id < <(get_rackspace_token_and_tenant "$rackspace_username" "$rackspace_api_key")
+  fi
 
   aws_accounts=$(get_aws_accounts_from_rackspace "$temporary_rackspace_token" "$tennant_id")
 
@@ -75,18 +100,6 @@ function aws_login() {
   if [ $exit_state -ne 0 ]; then
     # insert new line after last input
     echo
-
-    rackspace_token_json=$(curl --location 'https://identity.api.rackspacecloud.com/v2.0/tokens' \
-      --header 'Content-Type: application/json' \
-      --silent \
-      --data "{
-            \"auth\": {
-                \"RAX-KSKEY:apiKeyCredentials\": {
-                    \"username\": \"$username\",
-                    \"apiKey\": \"$api_key\"
-                }
-            }
-        }")
 
     temp_credentials=$(curl --location --silent \
                         --request POST "https://accounts.api.manage.rackspace.com/v0/awsAccounts/$aws_account_no/credentials" \
