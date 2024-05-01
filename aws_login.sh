@@ -82,7 +82,7 @@ function aws_login() {
   local tennant_id
 
   if [ ! -f "$config_dir/aws_accounts.txt" ]; then
-    read temporary_rackspace_token tennant_id < <(get_rackspace_token_and_tenant "$rackspace_username" "$rackspace_api_key")
+    read temporary_rackspace_token tennant_id < <(get_rackspace_token_and_tenant)
   fi
 
   aws_accounts=$(get_aws_accounts_from_rackspace "$temporary_rackspace_token" "$tennant_id")
