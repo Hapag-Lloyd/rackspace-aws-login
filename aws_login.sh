@@ -35,6 +35,28 @@ function aws_login() {
     fi
   }
 
+  function get_rackspace_username_and_api_key() {
+    kpscript_executable=$(command -v kpscript)
+
+    if [ -z "$KEEPASS_FILE" ] || [ -z "$kpscript_executable" ] ; then
+      # no Keepass in place --> ask the user
+      echo "Did not found your Keepass file or KPScript executable. Please enter your Rackspace credentials."
+
+      read -r -p 'Rackspace username: ' username
+      read -r -sp 'Rackspace API key: ' api_key
+    else
+      # get credentials from Keepass
+      echo "Reading credentials from Keepass: $KEEPASS_FILE"
+
+      read -r -sp 'Keepass Password: ' keepass_password
+
+      username=$(KPScript.exe -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
+      api_key=$( KPScript.exe -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
+    fi
+
+    echo "$username" "$api_key"
+  }
+
   temporary_rackspace_token=$(jq -r '.access.token.id' <<<"$rackspace_token_json")
   tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
 
@@ -51,9 +73,6 @@ function aws_login() {
   aws sts get-caller-identity --profile "$aws_profile_name" >/dev/null 2>&1 || exit_state=$?
 
   if [ $exit_state -ne 0 ]; then
-    read -r -p 'Rackspace username: ' username
-    read -r -sp 'Rackspace API key: ' api_key
-
     # insert new line after last input
     echo
 
