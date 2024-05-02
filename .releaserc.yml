@@ -5,7 +5,7 @@ branches:
 
 tagFormat: "${version}"
 
-preset: 'conventionalcommits'
+preset: "conventionalcommits"
 
 plugins:
   - "@semantic-release/commit-analyzer"
@@ -14,13 +14,11 @@ plugins:
   - "@semantic-release/git"
   - "@semantic-release/github"
   - "@semantic-release/exec"
-  - "semantic-release-maven"
 
 verifyConditions:
-  - '@semantic-release/git'
-  - '@semantic-release/github'
-  - '@semantic-release/changelog'
-  - 'semantic-release-maven'
+  - "@semantic-release/git"
+  - "@semantic-release/github"
+  - "@semantic-release/changelog"
 
 analyzeCommits:
   - path: "@semantic-release/commit-analyzer"
@@ -56,54 +54,50 @@ generateNotes:
     writerOpts:
       groupBy: "type"
       commitsSort: "header"
-      commitGroupsSort: 'title'
+      commitGroupsSort: "title"
     linkCompare: true
     linkReferences: true
     types:
-      - type: 'build'
-        section: '🦊 CI/CD'
+      - type: "build"
+        section: "🦊 CI/CD"
         hidden: false
-      - type: 'chore'
-        section: 'Other'
+      - type: "chore"
+        section: "Other"
         hidden: false
-      - type: 'ci'
-        section: '🦊 CI/CD'
+      - type: "ci"
+        section: "🦊 CI/CD"
         hidden: false
-      - type: 'docs'
-        section: '📔 Docs'
+      - type: "docs"
+        section: "📔 Docs"
         hidden: false
-      - type: 'feat'
-        section: '🚀 Features'
+      - type: "feat"
+        section: "🚀 Features"
         hidden: false
-      - type: 'fix'
-        section: '🛠 Fixes'
+      - type: "fix"
+        section: "🛠 Fixes"
         hidden: false
-      - type: 'perf'
-        section: '⏩ Performance'
+      - type: "perf"
+        section: "⏩ Performance"
         hidden: false
-      - type: 'refactor'
-        section: ':scissors: Refactor'
+      - type: "refactor"
+        section: ":scissors: Refactor"
         hidden: false
-      - type: 'revert'
-        section: '🙅‍♂️ Reverts'
+      - type: "revert"
+        section: "🙅‍♂️ Reverts"
         hidden: false
-      - type: 'style'
-        section: '💈 Style'
+      - type: "style"
+        section: "💈 Style"
         hidden: false
-      - type: 'test'
-        section: '🧪 Tests'
+      - type: "test"
+        section: "🧪 Tests"
         hidden: false
 
 prepare:
   - path: "@semantic-release/git"
   - path: "@semantic-release/changelog"
     changelogFile: "CHANGELOG.md"
-  - path: "semantic-release-maven"
 
 publish:
-  - path: "semantic-release-maven"
-    profiles:
-      - release
   - path: "@semantic-release/github"
     assets:
       - path: "CHANGELOG.md"
