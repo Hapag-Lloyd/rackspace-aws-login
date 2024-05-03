@@ -42,6 +42,8 @@ function aws_login() {
 
       read -r -p 'Rackspace username: ' rackspace_username
       read -r -sp 'Rackspace API key: ' rackspace_api_key
+      
+      echo ""
     else
       # get credentials from Keepass
       echo "Reading credentials from Keepass: $KEEPASS_FILE. Entry Rackspace (username + api-key field)."
@@ -74,7 +76,7 @@ function aws_login() {
   }
 
   if [ ! -f "$config_dir/aws_accounts.txt" ]; then
-    get_rackspace_token_and_tenant
+    get_aws_accounts_from_rackspace
   fi
 
   aws_accounts=$(cat "$config_dir/aws_accounts.txt")
