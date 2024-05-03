@@ -19,7 +19,7 @@ The minimum requirements are the AWS CLI and [JQ](https://github.com/jqlang/jq).
 
 Create a new entry in your KeePass database with the following fields:
 
-- titls: Rackspace
+- title: Rackspace
 - username: your Rackspace username
 - add a custom field with the name `api-key` and the value of your Rackspace API key
 
