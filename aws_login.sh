@@ -15,50 +15,47 @@ function aws_login() {
     mkdir -p "$config_dir"
   fi
 
+  local temporary_rackspace_token
+  local rackspace_tennant_id
+  local rackspace_username
+  local rackspace_api_key
+
   function get_aws_accounts_from_rackspace() {
-    local temporary_rackspace_token
-    local tennant_id
-
-    temporary_rackspace_token=$1
-    tennant_id=$2
-
-    if [ -f "$config_dir/aws_accounts.txt" ]; then
-      cat "$config_dir/aws_accounts.txt"
-    else
-      aws_accounts=$(curl --location 'https://accounts.api.manage.rackspace.com/v0/awsAccounts' \
-        --silent \
-        --header "X-Auth-Token: $temporary_rackspace_token" \
-        --header "X-Tenant-Id: $tennant_id" | jq -r '.awsAccounts[] | .awsAccountNumber + "_" + .name' | sed 's/\r//' | sort)
-
-      echo "$aws_accounts" > "$config_dir/aws_accounts.txt"
-      echo "$aws_accounts"
+    if [ -z "$temporary_rackspace_token" ]; then
+      get_rackspace_token_and_tenant
     fi
+
+    aws_accounts=$(curl --location 'https://accounts.api.manage.rackspace.com/v0/awsAccounts' \
+      --silent \
+      --header "X-Auth-Token: $temporary_rackspace_token" \
+      --header "X-Tenant-Id: $rackspace_tennant_id" | jq -r '.awsAccounts[] | .awsAccountNumber + "_" + .name' | sed 's/\r//' | sort)
+
+    echo "$aws_accounts" > "$config_dir/aws_accounts.txt"
   }
 
   function get_rackspace_username_and_api_key() {
     kpscript_executable=$(command -v kpscript)
 
-    if [ -z "$KEEPASS_FILE" ] || [ -z "$kpscript_executable" ] ; then
+    if [ -z "$KEEPASS_FILE" ] || [ -z "$kpscript_executable" ]; then
       # no Keepass in place --> ask the user
       echo "Did not found your Keepass file or KPScript executable. Please enter your Rackspace credentials."
 
-      read -r -p 'Rackspace username: ' username
-      read -r -sp 'Rackspace API key: ' api_key
+      read -r -p 'Rackspace username: ' rackspace_username
+      read -r -sp 'Rackspace API key: ' rackspace_api_key
     else
       # get credentials from Keepass
-      echo "Reading credentials from Keepass: $KEEPASS_FILE"
+      echo "Reading credentials from Keepass: $KEEPASS_FILE. Entry Rackspace (username + api-key field)."
 
       read -r -sp 'Keepass Password: ' keepass_password
+      echo ""
 
-      username=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
-      api_key=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
+      rackspace_username=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
+      rackspace_api_key=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
     fi
-
-    echo "$username" "$api_key"
   }
 
   function get_rackspace_token_and_tenant() {
-    read rackspace_username rackspace_api_key < <(get_rackspace_username_and_api_key)
+    get_rackspace_username_and_api_key
 
     rackspace_token_json=$(curl --location 'https://identity.api.rackspacecloud.com/v2.0/tokens' \
       --header 'Content-Type: application/json' \
@@ -72,20 +69,15 @@ function aws_login() {
             }
         }")
 
-    temporary_token=$(jq -r '.access.token.id' <<<"$rackspace_token_json")
-    tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
-
-    echo "$temporary_token" "$tennant_id"
+    temporary_rackspace_token=$(jq -r '.access.token.id' <<<"$rackspace_token_json")
+    rackspace_tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
   }
 
-  local temporary_rackspace_token
-  local tennant_id
-
   if [ ! -f "$config_dir/aws_accounts.txt" ]; then
-    read temporary_rackspace_token tennant_id < <(get_rackspace_token_and_tenant)
+    get_rackspace_token_and_tenant
   fi
 
-  aws_accounts=$(get_aws_accounts_from_rackspace "$temporary_rackspace_token" "$tennant_id")
+  aws_accounts=$(cat "$config_dir/aws_accounts.txt")
 
   PS3='Select the AWS account to connect to: '
   select opt in $aws_accounts; do
@@ -98,13 +90,14 @@ function aws_login() {
   aws sts get-caller-identity --profile "$aws_profile_name" >/dev/null 2>&1 || exit_state=$?
 
   if [ $exit_state -ne 0 ]; then
-    # insert new line after last input
-    echo
+    if [ -z "$temporary_rackspace_token" ]; then
+      get_rackspace_token_and_tenant
+    fi
 
     temp_credentials=$(curl --location --silent \
                         --request POST "https://accounts.api.manage.rackspace.com/v0/awsAccounts/$aws_account_no/credentials" \
                         --header "X-Auth-Token: $temporary_rackspace_token" \
-                        --header "X-Tenant-Id: $tennant_id")
+                        --header "X-Tenant-Id: $rackspace_tennant_id")
 
     access_key=$(jq -r '.credential.accessKeyId' <<<"$temp_credentials")
     secret_access_key=$(jq -r '.credential.secretAccessKey' <<<"$temp_credentials")
