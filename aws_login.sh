@@ -75,7 +75,7 @@ function aws_login() {
     rackspace_tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
   }
 
-  if [ ! -f "$config_dir/aws_accounts.txt" ]; then
+  if [ ! -s "$config_dir/aws_accounts.txt" ]; then
     get_aws_accounts_from_rackspace
   fi
 
