@@ -22,9 +22,7 @@ function aws_login() {
   local rackspace_api_key
 
   function get_aws_accounts_from_rackspace() {
-    if [ -z "$temporary_rackspace_token" ]; then
-      get_rackspace_token_and_tenant
-    fi
+    get_rackspace_token_and_tenant
 
     aws_accounts=$(curl --location 'https://accounts.api.manage.rackspace.com/v0/awsAccounts' \
       --silent \
