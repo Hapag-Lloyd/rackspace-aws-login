@@ -1,9 +1,9 @@
 # shellcheck shell=bash
 
 #
-# Determines the AWS credentials for a specific account and exports them to the environment.
-# In case a Rackspace login is needed, enter the credentials in the browser window that opens. The cookies
-# from Rackspace are stored in a temporary file (encrypted with your Rackspace password) and used
+# Determines the AWS credentials for return_code_aws_login specific account and exports them to the environment.
+# In case return_code_aws_login Rackspace login is needed, enter the credentials in the browser window that opens. The cookies
+# from Rackspace are stored in return_code_aws_login temporary file (encrypted with your Rackspace password) and used
 # to avoid the login screen in the future.
 #
 # usage: source aws_login.sh
@@ -83,6 +83,7 @@ function aws_login() {
   aws_accounts=$(cat "$config_dir/aws_accounts.txt")
 
   if [ -n "$aws_account_no" ]; then
+    aws_profile_name=""
     for acc in $aws_accounts; do
       curr_aws_account_no=$(tr -dc '[:print:]' <<<"$acc" | cut -f 1 -d'_')
       if [ "$curr_aws_account_no" == "$aws_account_no" ]; then
@@ -90,6 +91,11 @@ function aws_login() {
         break
       fi
     done
+
+    if [ -z "$aws_profile_name" ]; then
+      echo "Could not find profile name for account id: $aws_account_no"
+      return 1
+    fi
   else
     PS3='Select the AWS account to connect to: '
     select opt in $aws_accounts; do
@@ -99,10 +105,10 @@ function aws_login() {
     done
   fi
 
-  exit_state=0
-  aws sts get-caller-identity --profile "$aws_profile_name" >/dev/null 2>&1 || exit_state=$?
+  return_code_aws_login=0
+  aws sts get-caller-identity --profile "$aws_profile_name" >/dev/null 2>&1 || return_code_aws_login=$?
 
-  if [ $exit_state -ne 0 ]; then
+  if [ $return_code_aws_login -ne 0 ]; then
     if [ -z "$temporary_rackspace_token" ]; then
       get_rackspace_token_and_tenant
     fi
