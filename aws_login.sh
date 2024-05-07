@@ -16,7 +16,7 @@ function aws_login() {
     mkdir -p "$config_dir"
   fi
 
-  local temporary_rackspace_token
+  local temporary_rackspace_token=""
   local rackspace_tennant_id
   local rackspace_username
   local rackspace_api_key
