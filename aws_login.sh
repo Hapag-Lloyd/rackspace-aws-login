@@ -10,6 +10,7 @@
 #        aws_login [aws_account_id]
 #
 function aws_login() {
+  aws_account_no="$1"; shift;
   local config_dir="$HOME/.config/rackspace-aws-login"
   if [ ! -d "$config_dir" ]; then
     mkdir -p "$config_dir"
@@ -30,7 +31,7 @@ function aws_login() {
       --header "X-Auth-Token: $temporary_rackspace_token" \
       --header "X-Tenant-Id: $rackspace_tennant_id" | jq -r '.awsAccounts[] | .awsAccountNumber + "_" + .name' | sed 's/\r//' | sort)
 
-    echo "$aws_accounts" > "$config_dir/aws_accounts.txt"
+    echo "$aws_accounts" >"$config_dir/aws_accounts.txt"
   }
 
   function get_rackspace_username_and_api_key() {
@@ -42,7 +43,7 @@ function aws_login() {
 
       read -r -p 'Rackspace username: ' rackspace_username
       read -r -sp 'Rackspace API key: ' rackspace_api_key
-      
+
       echo ""
     else
       # get credentials from Keepass
@@ -51,8 +52,8 @@ function aws_login() {
       read -r -sp 'Keepass Password: ' keepass_password
       echo ""
 
-      rackspace_username=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
-      rackspace_api_key=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1 )
+      rackspace_username=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1)
+      rackspace_api_key=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1)
     fi
   }
 
@@ -81,12 +82,22 @@ function aws_login() {
 
   aws_accounts=$(cat "$config_dir/aws_accounts.txt")
 
-  PS3='Select the AWS account to connect to: '
-  select opt in $aws_accounts; do
-    aws_account_no=$(tr -dc '[:print:]' <<<"$opt" | cut -f 1 -d'_')
-    aws_profile_name=$(tr -dc '[:print:]' <<<"$opt" | cut -f 2- -d'_')
-    break
-  done
+  if [ -n "$aws_account_no" ]; then
+    for acc in $aws_accounts; do
+      curr_aws_account_no=$(tr -dc '[:print:]' <<<"$acc" | cut -f 1 -d'_')
+      if [ "$curr_aws_account_no" == "$aws_account_no" ]; then
+        aws_profile_name=$(tr -dc '[:print:]' <<<"$acc" | cut -f 2- -d'_')
+        break
+      fi
+    done
+  else
+    PS3='Select the AWS account to connect to: '
+    select opt in $aws_accounts; do
+      aws_account_no=$(tr -dc '[:print:]' <<<"$opt" | cut -f 1 -d'_')
+      aws_profile_name=$(tr -dc '[:print:]' <<<"$opt" | cut -f 2- -d'_')
+      break
+    done
+  fi
 
   exit_state=0
   aws sts get-caller-identity --profile "$aws_profile_name" >/dev/null 2>&1 || exit_state=$?
@@ -97,9 +108,9 @@ function aws_login() {
     fi
 
     temp_credentials=$(curl --location --silent \
-                        --request POST "https://accounts.api.manage.rackspace.com/v0/awsAccounts/$aws_account_no/credentials" \
-                        --header "X-Auth-Token: $temporary_rackspace_token" \
-                        --header "X-Tenant-Id: $rackspace_tennant_id")
+      --request POST "https://accounts.api.manage.rackspace.com/v0/awsAccounts/$aws_account_no/credentials" \
+      --header "X-Auth-Token: $temporary_rackspace_token" \
+      --header "X-Tenant-Id: $rackspace_tennant_id")
 
     access_key=$(jq -r '.credential.accessKeyId' <<<"$temp_credentials")
     secret_access_key=$(jq -r '.credential.secretAccessKey' <<<"$temp_credentials")
