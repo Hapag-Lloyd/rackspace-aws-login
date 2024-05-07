@@ -54,6 +54,7 @@
     "signoff",
     "stty",
     "venv",
-    "vuln"
+    "vuln",
+    "curr"
   ]
 }
