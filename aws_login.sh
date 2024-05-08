@@ -107,10 +107,23 @@ function aws_login() {
     get_aws_accounts_from_rackspace
   fi
 
-  aws_accounts=$(cat "$config_dir/aws_accounts.txt")
+  # Git Bash does not have pgrep installed
+  # shellcheck disable=SC2009
+  if ps -p $$ | grep bash >/dev/null 2>&1; then
+    aws_accounts=$(cat "$config_dir/aws_accounts.txt")
+  elif ps -p $$ | grep zsh >/dev/null 2>&1; then
+    # this is valid ZSH
+    # shellcheck disable=SC2296
+    aws_accounts=("${(@f)$(< "$config_dir/aws_accounts.txt")}")
+  else
+    echo "Please use bash or zsh."
+    return 1
+  fi
 
   if [ -n "$aws_account_no" ]; then
     aws_profile_name=""
+    # false positive because of mixed bash and zsh code
+    # shellcheck disable=SC2128
     for acc in $aws_accounts; do
       curr_aws_account_no=$(tr -dc '[:print:]' <<<"$acc" | cut -f 1 -d'_')
       if [ "$curr_aws_account_no" = "$aws_account_no" ]; then
@@ -125,6 +138,8 @@ function aws_login() {
     fi
   else
     PS3='Select the AWS account to connect to: '
+    # false positive because of mixed bash and zsh code
+    # shellcheck disable=SC2128
     select opt in $aws_accounts; do
       aws_account_no=$(tr -dc '[:print:]' <<<"$opt" | cut -f 1 -d'_')
       aws_profile_name=$(tr -dc '[:print:]' <<<"$opt" | cut -f 2- -d'_')
