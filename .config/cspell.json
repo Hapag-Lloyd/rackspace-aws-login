@@ -55,6 +55,7 @@
     "stty",
     "venv",
     "vuln",
-    "curr"
+    "curr",
+    "pgrep"
   ]
 }

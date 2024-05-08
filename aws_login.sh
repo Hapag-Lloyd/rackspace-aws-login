@@ -10,7 +10,7 @@
 #        aws_login [aws_account_id]
 #
 function aws_login() {
-  aws_account_no="$1"; shift;
+  aws_account_no="$1";
   local config_dir="$HOME/.config/rackspace-aws-login"
   if [ ! -d "$config_dir" ]; then
     mkdir -p "$config_dir"
@@ -20,6 +20,31 @@ function aws_login() {
   local rackspace_tennant_id
   local rackspace_username
   local rackspace_api_key
+
+  function read_input() {
+    if [ "${3:-}" = "hide_input" ]; then
+      sensitive_value_flag="-s"
+    else
+      sensitive_value_flag=""
+    fi
+
+    # Git Bash does not have pgrep installed
+    # shellcheck disable=SC2009
+    if ps -p $$ | grep bash >/dev/null 2>&1; then
+      # We reference the var to set via indirect reference + we explicitly want the flag to be interpreted by shell
+      # shellcheck disable=SC2229,SC2086
+      read -r $sensitive_value_flag -p "$1" "$2"
+    elif ps -p $$ | grep zsh >/dev/null 2>&1; then
+      # We reference the var to set via indirect reference + we explicitly want the flag to be interpreted by shell
+      # shellcheck disable=SC2229,SC2086
+      read -r $sensitive_value_flag "?$1" "$2"
+    else
+      echo "Please use bash or zsh."
+      return 1
+    fi
+
+    return 0;
+  }
 
   function get_aws_accounts_from_rackspace() {
     if [ -z "$temporary_rackspace_token" ]; then
@@ -41,17 +66,19 @@ function aws_login() {
       # no Keepass in place --> ask the user
       echo "Did not found your Keepass file or KPScript executable. Please enter your Rackspace credentials."
 
-      read -r -p 'Rackspace username: ' rackspace_username
-      read -r -sp 'Rackspace API key: ' rackspace_api_key
+      read_input 'Rackspace username: ' rackspace_username
+      read_input 'Rackspace API key: ' rackspace_api_key "hide_input"
 
       echo ""
     else
       # get credentials from Keepass
       echo "Reading credentials from Keepass: $KEEPASS_FILE. Entry Rackspace (username + api-key field)."
 
-      read -r -sp 'Keepass Password: ' keepass_password
+      read_input 'Keepass Password: ' keepass_password "hide_input"
       echo ""
 
+      # keepass_password is set via read_input, but indirectly
+      # shellcheck disable=SC2154
       rackspace_username=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1)
       rackspace_api_key=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1)
     fi
@@ -86,7 +113,7 @@ function aws_login() {
     aws_profile_name=""
     for acc in $aws_accounts; do
       curr_aws_account_no=$(tr -dc '[:print:]' <<<"$acc" | cut -f 1 -d'_')
-      if [ "$curr_aws_account_no" == "$aws_account_no" ]; then
+      if [ "$curr_aws_account_no" = "$aws_account_no" ]; then
         aws_profile_name=$(tr -dc '[:print:]' <<<"$acc" | cut -f 2- -d'_')
         break
       fi
