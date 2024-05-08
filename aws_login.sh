@@ -112,6 +112,8 @@ function aws_login() {
   if ps -p $$ | grep bash >/dev/null 2>&1; then
     aws_accounts=$(cat "$config_dir/aws_accounts.txt")
   elif ps -p $$ | grep zsh >/dev/null 2>&1; then
+    # this is valid ZSH
+    # shellcheck disable=SC2296
     aws_accounts=("${(@f)$(< "$config_dir/aws_accounts.txt")}")
   else
     echo "Please use bash or zsh."
