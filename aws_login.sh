@@ -67,16 +67,18 @@ function aws_login() {
       echo "Did not found your Keepass file or KPScript executable. Please enter your Rackspace credentials."
 
       read_input 'Rackspace username: ' rackspace_username
-      read_input 'Rackspace API key: ' rackspace_api_key hide_input
+      read_input 'Rackspace API key: ' rackspace_api_key "hide_input"
 
       echo ""
     else
       # get credentials from Keepass
       echo "Reading credentials from Keepass: $KEEPASS_FILE. Entry Rackspace (username + api-key field)."
 
-      read_input 'Keepass Password: ' keepass_password hide_input
+      read_input 'Keepass Password: ' keepass_password "hide_input"
       echo ""
 
+      # keepass_password is set via read_input, but indirectly
+      # shellcheck disable=SC2154
       rackspace_username=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1)
       rackspace_api_key=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1)
     fi
