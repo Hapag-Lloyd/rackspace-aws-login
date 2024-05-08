@@ -22,7 +22,7 @@ function aws_login() {
   local rackspace_api_key
 
   function read_input() {
-    if [ "${3:-}" == "hide_input" ]; then
+    if [ "${3:-}" = "hide_input" ]; then
       sensitive_value_flag="-s"
     else
       sensitive_value_flag=""
@@ -31,13 +31,13 @@ function aws_login() {
     # Git Bash does not have pgrep installed
     # shellcheck disable=SC2009
     if ps -p $$ | grep bash >/dev/null 2>&1; then
-      # We reference the var to set via indirect reference.
-      # shellcheck disable=SC2229
-      read -r "$sensitive_value_flag" -p "$1" "$2"
+      # We reference the var to set via indirect reference + we explicitly want the flag to be interpreted by shell
+      # shellcheck disable=SC2229,SC2086
+      read -r $sensitive_value_flag -p "$1" "$2"
     elif ps -p $$ | grep zsh >/dev/null 2>&1; then
-      # We reference the var to set via indirect reference.
-      # shellcheck disable=SC2229
-      read -r "$sensitive_value_flag" "?$1" "$2"
+      # We reference the var to set via indirect reference + we explicitly want the flag to be interpreted by shell
+      # shellcheck disable=SC2229,SC2086
+      read -r $sensitive_value_flag "?$1" "$2"
     else
       echo "Please use bash or zsh."
       return 1
@@ -111,7 +111,7 @@ function aws_login() {
     aws_profile_name=""
     for acc in $aws_accounts; do
       curr_aws_account_no=$(tr -dc '[:print:]' <<<"$acc" | cut -f 1 -d'_')
-      if [ "$curr_aws_account_no" == "$aws_account_no" ]; then
+      if [ "$curr_aws_account_no" = "$aws_account_no" ]; then
         aws_profile_name=$(tr -dc '[:print:]' <<<"$acc" | cut -f 2- -d'_')
         break
       fi
