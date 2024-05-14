@@ -9,6 +9,21 @@
 # usage: source aws_login.sh
 #        aws_login [aws_account_id]
 #
+
+#
+# returns 0 if the shell process name is the same as the given argument
+#         1 otherwise
+#
+function is_shell() {
+  local shell_name=$1
+
+  if command ps -p $$ | grep "$shell_name" >/dev/null 2>&1; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 function aws_login() {
   aws_account_no="$1";
   local config_dir="$HOME/.config/rackspace-aws-login"
@@ -28,13 +43,11 @@ function aws_login() {
       sensitive_value_flag=""
     fi
 
-    # Git Bash does not have pgrep installed
-    # shellcheck disable=SC2009
-    if ps -p $$ | grep bash >/dev/null 2>&1; then
+    if is_shell bash; then
       # We reference the var to set via indirect reference + we explicitly want the flag to be interpreted by shell
       # shellcheck disable=SC2229,SC2086
       read -r $sensitive_value_flag -p "$1" "$2"
-    elif ps -p $$ | grep zsh >/dev/null 2>&1; then
+    elif is_shell zsh; then
       # We reference the var to set via indirect reference + we explicitly want the flag to be interpreted by shell
       # shellcheck disable=SC2229,SC2086
       read -r $sensitive_value_flag "?$1" "$2"
@@ -109,9 +122,9 @@ function aws_login() {
 
   # Git Bash does not have pgrep installed
   # shellcheck disable=SC2009
-  if ps -p $$ | grep bash >/dev/null 2>&1; then
-    aws_accounts=$(cat "$config_dir/aws_accounts.txt")
-  elif ps -p $$ | grep zsh >/dev/null 2>&1; then
+  if is_shell bash; then
+    aws_accounts=$(command cat "$config_dir/aws_accounts.txt")
+  elif is_shell zsh; then
     # this is valid ZSH
     # shellcheck disable=SC2296
     aws_accounts=("${(@f)$(< "$config_dir/aws_accounts.txt")}")
