@@ -2,10 +2,11 @@
 name: Approve all Renovate PRs automatically
 
 # yamllint disable-line rule:truthy
-on: pull_request_target
+on:
+  pull_request_target
 
 jobs:
   default:
     # yamllint disable-line rule:line-length
-    uses: Hapag-Lloyd/Repository-Templates/.github/workflows/default_renovate_auto_approve_callable.yml@aa06a3d8a580efc719d66bafdcb5d2ca6613cdea
+    uses: Hapag-Lloyd/Workflow-Templates/.github/workflows/default_renovate_auto_approve_callable.yml@a28fa2f991164959262587011188af99a7f0cb20
     secrets: inherit
