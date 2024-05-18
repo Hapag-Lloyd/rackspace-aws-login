@@ -35,6 +35,9 @@ function aws_login() {
   local rackspace_tennant_id
   local rackspace_username
   local rackspace_api_key
+  local aws_access_key_id
+  local aws_secret_access_key
+  local aws_session_token
 
   function read_input() {
     if [ "${3:-}" = "hide_input" ]; then
@@ -73,6 +76,11 @@ function aws_login() {
   }
 
   function get_rackspace_username_and_api_key() {
+    if [ -n "$rackspace_username" ] && [ -n "$rackspace_api_key" ]; then
+      # already set --> use it
+      return
+    fi
+
     kpscript_executable=$(command -v kpscript)
 
     if [ -z "$KEEPASS_FILE" ] || [ -z "$kpscript_executable" ]; then
@@ -94,26 +102,63 @@ function aws_login() {
       # shellcheck disable=SC2154
       rackspace_username=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:UserName -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1)
       rackspace_api_key=$($kpscript_executable -c:GetEntryString "${KEEPASS_FILE}" -Field:api-key -ref-Title:"Rackspace" -FailIfNoEntry -pw:"$keepass_password" | head -n1)
+
+      if [[ "$rackspace_username" == *"master key is invalid"* ]]; then
+        echo "The Keepass master key is invalid."
+
+        rackspace_username=""
+        rackspace_api_key=""
+      elif [[ "$rackspace_username" == *"Entry not found"* ]]; then
+        echo "The Keepass entry for Rackspace could not be found."
+
+        rackspace_username=""
+        rackspace_api_key=""
+      fi
     fi
   }
 
   function get_rackspace_token_and_tenant() {
+    if [ -n "$temporary_rackspace_token" ] && [ -n "$rackspace_tennant_id" ]; then
+      # already set --> use it
+      return
+    fi
+
     get_rackspace_username_and_api_key
 
-    rackspace_token_json=$(curl --location 'https://identity.api.rackspacecloud.com/v2.0/tokens' \
-      --header 'Content-Type: application/json' \
-      --silent \
-      --data "{
-            \"auth\": {
-                \"RAX-KSKEY:apiKeyCredentials\": {
-                    \"username\": \"$rackspace_username\",
-                    \"apiKey\": \"$rackspace_api_key\"
-                }
-            }
-        }")
+    if [ -n "$rackspace_username" ] && [ -n "$rackspace_api_key" ]; then
+      rackspace_token_json=$(curl --location 'https://identity.api.rackspacecloud.com/v2.0/tokens' \
+        --header 'Content-Type: application/json' \
+        --silent \
+        --data "{
+              \"auth\": {
+                  \"RAX-KSKEY:apiKeyCredentials\": {
+                      \"username\": \"$rackspace_username\",
+                      \"apiKey\": \"$rackspace_api_key\"
+                  }
+              }
+          }")
 
-    temporary_rackspace_token=$(jq -r '.access.token.id' <<<"$rackspace_token_json")
-    rackspace_tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
+      temporary_rackspace_token=$(jq -r '.access.token.id' <<<"$rackspace_token_json")
+      rackspace_tennant_id=$(jq -r '.access.token.tenant.id' <<<"$rackspace_token_json")
+    else
+      temporary_rackspace_token=""
+      rackspace_tennant_id=""
+    fi
+  }
+
+  function fetch_aws_credentials_from_rackspace() {
+    local aws_account_no=$1
+
+    get_rackspace_token_and_tenant
+
+    temp_credentials=$(curl --location --silent \
+      --request POST "https://accounts.api.manage.rackspace.com/v0/awsAccounts/$aws_account_no/credentials" \
+      --header "X-Auth-Token: $temporary_rackspace_token" \
+      --header "X-Tenant-Id: $rackspace_tennant_id")
+
+    aws_access_key_id=$(jq -r '.credential.accessKeyId' <<<"$temp_credentials" | tr -d '\r\n')
+    aws_secret_access_key=$(jq -r '.credential.secretAccessKey' <<<"$temp_credentials" | tr -d '\r\n')
+    aws_session_token=$(jq -r '.credential.sessionToken' <<<"$temp_credentials" | tr -d '\r\n')
   }
 
   if [ ! -s "$config_dir/aws_accounts.txt" ]; then
@@ -164,27 +209,21 @@ function aws_login() {
   aws sts get-caller-identity --profile "$aws_profile_name" >/dev/null 2>&1 || return_code_aws_login=$?
 
   if [ $return_code_aws_login -ne 0 ]; then
-    if [ -z "$temporary_rackspace_token" ]; then
-      get_rackspace_token_and_tenant
+    fetch_aws_credentials_from_rackspace "$aws_account_no"
+
+    if [ -z "$aws_access_key_id" ] || [ -z "$aws_secret_access_key" ] || [ -z "$aws_session_token" ]; then
+      echo "Could not fetch AWS credentials from Rackspace."
+      return 1
     fi
 
-    temp_credentials=$(curl --location --silent \
-      --request POST "https://accounts.api.manage.rackspace.com/v0/awsAccounts/$aws_account_no/credentials" \
-      --header "X-Auth-Token: $temporary_rackspace_token" \
-      --header "X-Tenant-Id: $rackspace_tennant_id")
-
-    access_key=$(jq -r '.credential.accessKeyId' <<<"$temp_credentials")
-    secret_access_key=$(jq -r '.credential.secretAccessKey' <<<"$temp_credentials")
-    session_token=$(jq -r '.credential.sessionToken' <<<"$temp_credentials")
-
-    aws configure --profile "$aws_profile_name" set aws_access_key_id "$(echo "$access_key" | tr -d '\r\n')"
-    aws configure --profile "$aws_profile_name" set aws_secret_access_key "$(echo "$secret_access_key" | tr -d '\r\n')"
-    aws configure --profile "$aws_profile_name" set aws_session_token "$(echo "$session_token" | tr -d '\r\n')"
+    aws configure --profile "$aws_profile_name" set aws_access_key_id "$aws_access_key_id"
+    aws configure --profile "$aws_profile_name" set aws_secret_access_key "$aws_secret_access_key"
+    aws configure --profile "$aws_profile_name" set aws_session_token "$aws_session_token"
   else
     echo "The AWS credentials are still valid."
   fi
 
-  echo "Switching the AWS_PROFILE to $aws_profile_name"
+  echo "Setting AWS_PROFILE to $aws_profile_name"
 
   export AWS_PROFILE="$aws_profile_name"
 
