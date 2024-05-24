@@ -40,7 +40,7 @@ function aws_login() {
       set -x;
       ;;
     *)
-      # if $1 contains =, then split it and assign the first part to aws_accunt and the second part to aws_profile_name_input
+      # if $1 contains =, then split it and assign the first part to aws_account and the second part to aws_profile_name_input
       if [[ "$1" == *"="* ]]; then
         aws_account_no=$(echo "$1" | cut -d'=' -f1)
         aws_profile_name_alias=$(echo "$1" | cut -d'=' -f2)
