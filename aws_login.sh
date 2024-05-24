@@ -44,6 +44,12 @@ function aws_login() {
       if [[ "$1" == *"="* ]]; then
         aws_account_no=$(echo "$1" | cut -d'=' -f1)
         aws_profile_name_alias=$(echo "$1" | cut -d'=' -f2)
+
+        # validate, that aws_account_no and aws_profile_name_alias are not empty
+        if [ -z "$aws_account_no" ] || [ -z "$aws_profile_name_alias" ]; then
+          echo "Invalid input. Please provide the AWS account number and the AWS profile name alias separated by '='."
+          return 1
+        fi
       else
         aws_account_no="$1"
       fi
