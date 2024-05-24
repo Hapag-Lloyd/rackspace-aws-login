@@ -7,7 +7,7 @@
 # to avoid the login screen in the future.
 #
 # usage: source aws_login.sh
-#        aws_login [aws_account_id]
+#        aws_login [--no-export|--debug] [aws_account_id|aws_account_id=aws_profile_name_alias]
 #
 
 #
@@ -25,7 +25,39 @@ function is_shell() {
 }
 
 function aws_login() {
-  aws_account_no="$1";
+  no_export=false
+  aws_profile_name_alias=""
+  aws_account_no=""
+  debug=false
+  # Read all parameters into local variables. If no parameters are given, set the default values.
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+    --no-export)
+      no_export=true;
+      ;;
+    --debug)
+      debug=true;
+      set -x;
+      ;;
+    *)
+      # if $1 contains =, then split it and assign the first part to aws_account and the second part to aws_profile_name_input
+      if [[ "$1" == *"="* ]]; then
+        aws_account_no=$(echo "$1" | cut -d'=' -f1)
+        aws_profile_name_alias=$(echo "$1" | cut -d'=' -f2)
+
+        # validate, that aws_account_no and aws_profile_name_alias are not empty
+        if [ -z "$aws_account_no" ] || [ -z "$aws_profile_name_alias" ]; then
+          echo "Invalid input. Please provide the AWS account number and the AWS profile name alias separated by '='."
+          return 1
+        fi
+      else
+        aws_account_no="$1"
+      fi
+      ;;
+    esac
+    shift
+  done
+
   local config_dir="$HOME/.config/rackspace-aws-login"
   if [ ! -d "$config_dir" ]; then
     mkdir -p "$config_dir"
@@ -219,13 +251,27 @@ function aws_login() {
     aws configure --profile "$aws_profile_name" set aws_access_key_id "$aws_access_key_id"
     aws configure --profile "$aws_profile_name" set aws_secret_access_key "$aws_secret_access_key"
     aws configure --profile "$aws_profile_name" set aws_session_token "$aws_session_token"
+
+    aws configure --profile "$aws_profile_name_alias" set aws_access_key_id "$aws_access_key_id"
+    aws configure --profile "$aws_profile_name_alias" set aws_secret_access_key "$aws_secret_access_key"
+    aws configure --profile "$aws_profile_name_alias" set aws_session_token "$aws_session_token"
   else
     echo "The AWS credentials are still valid."
   fi
 
-  echo "Setting AWS_PROFILE to $aws_profile_name"
+  # Export the AWS_PROFILE variable if the --no-export flag is not set
+  if [ "$no_export" = false ]; then
+    if [ -z "$aws_profile_name_alias" ]; then
+      aws_profile_name_alias="$aws_profile_name"
+    fi
+    echo "Setting AWS_PROFILE to $aws_profile_name_alias"
+    export AWS_PROFILE="$aws_profile_name_alias"
+  fi
 
-  export AWS_PROFILE="$aws_profile_name"
+  # disable debug mode
+  if [ "$debug" = true ]; then
+      set +x
+  fi
 
   return 0
 }
