@@ -64,12 +64,12 @@ function aws_login() {
   fi
 
   local temporary_rackspace_token=""
-  local rackspace_tennant_id
-  local rackspace_username
-  local rackspace_api_key
-  local aws_access_key_id
-  local aws_secret_access_key
-  local aws_session_token
+  local rackspace_tennant_id=""
+  local rackspace_username=""
+  local rackspace_api_key=""
+  local aws_access_key_id=""
+  local aws_secret_access_key=""
+  local aws_session_token=""
 
   function read_input() {
     if [ "${3:-}" = "hide_input" ]; then
@@ -252,9 +252,12 @@ function aws_login() {
     aws configure --profile "$aws_profile_name" set aws_secret_access_key "$aws_secret_access_key"
     aws configure --profile "$aws_profile_name" set aws_session_token "$aws_session_token"
 
-    aws configure --profile "$aws_profile_name_alias" set aws_access_key_id "$aws_access_key_id"
-    aws configure --profile "$aws_profile_name_alias" set aws_secret_access_key "$aws_secret_access_key"
-    aws configure --profile "$aws_profile_name_alias" set aws_session_token "$aws_session_token"
+    # only set alias config if alias is set
+    if [ -n "$aws_profile_name_alias" ]; then
+      aws configure --profile "$aws_profile_name_alias" set aws_access_key_id "$aws_access_key_id"
+      aws configure --profile "$aws_profile_name_alias" set aws_secret_access_key "$aws_secret_access_key"
+      aws configure --profile "$aws_profile_name_alias" set aws_session_token "$aws_session_token"
+    fi
   else
     echo "The AWS credentials are still valid."
   fi
