@@ -1,6 +1,6 @@
 kdbx
 keepass
 kpscript
-KSKEY
+kskey
 tennant
 venv
