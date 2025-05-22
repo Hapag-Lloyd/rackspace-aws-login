@@ -1,0 +1,6 @@
+kdbx
+keepass
+kpscript
+kskey
+tennant
+venv

@@ -1,3 +1,6 @@
+<!-- ignore multiple H1 headings on same level -->
+<!-- markdownlint-disable-file MD025 -->
+
 # Description
 
 What is the overall goal of your PR? Which problem does it solve? Please also include relevant motivation and context.
@@ -11,8 +14,6 @@ yes: please describe the migration
 no: please delete the whole paragraph
 
 # Verification
-
-This paragraph is usually not needed if automated tests are in place for the change.
 
 Please describe the test cases you used to verify your code. Did you check the change in your environment?
 
