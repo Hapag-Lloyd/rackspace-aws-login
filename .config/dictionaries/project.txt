@@ -1,0 +1,14 @@
+aesgcm
+ciphertext
+cpus
+dockerhub
+Hapag
+Infracost
+keepass
+oidc
+pytest
+Repology
+tennant
+tflint
+tfsec
+virtualenv
