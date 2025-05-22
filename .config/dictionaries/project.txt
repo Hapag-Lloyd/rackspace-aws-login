@@ -4,11 +4,13 @@ cpus
 dockerhub
 Hapag
 Infracost
+kdbx
 keepass
+kpscript
+KSKEY
 oidc
 pytest
 Repology
 tennant
-tflint
-tfsec
+venv
 virtualenv
