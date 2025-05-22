@@ -1,16 +1,8 @@
-aesgcm
-ciphertext
-cpus
-dockerhub
 Hapag
 Infracost
 kdbx
 keepass
 kpscript
 KSKEY
-oidc
-pytest
-Repology
 tennant
 venv
-virtualenv
